@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Clrkio: sync</title>
+    </head>
+    <body>
+        <h1>Sync results</h1>
+        <h2>Members added during this sync:</h2>
+        <ul>
+            {% for m in added %}
+            <li>{{ m.full_name }}</li>
+            {% endfor %}
+        </ul>
+        <h2>Members removed during this sync:</h2>
+        <ul>
+            {% for m in removed %}
+            <li>{{ m.full_name }}</li>
+            {% endfor %}
+        </ul>
+    </body>
+</html>

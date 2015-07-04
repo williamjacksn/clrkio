@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block body %}
+    <h1>Member list</h1>
+    <ul>
+        {% for m in members %}
+            <li>{{ m.full_name }}</li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('pre_sync') }}">sync</a>
+{% endblock %}
