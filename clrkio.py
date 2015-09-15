@@ -436,9 +436,9 @@ class Member(object):
 
 
 def get_conf_dir():
-    conf_dir = pathlib.Path(os.environ.get('HOME')).resolve() / '.clrkio'
+    conf_dir = pathlib.Path(os.environ.get('HOME')).resolve() / '.config/clrkio'
     if not conf_dir.exists():
-        conf_dir.mkdir()
+        conf_dir.mkdir(parents=True)
     return conf_dir
 
 
