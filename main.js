@@ -1,33 +1,29 @@
-var app = require("app");
-var browserWindow = require("browser-window");
+const electron = require('electron');
+const {app} = electron;
+const {BrowserWindow} = electron;
 
-require("crash-reporter").start();
+let win;
 
-var mainWindow = null;
+function createWindow() {
+    const clrkio = __dirname + '/clrkio.py';
+    const spawn = require('child_process').spawn;
+    const backend = spawn('C:\\Users\\william.jackson\\Pythons\\clrkio\\Scripts\\python.exe', [clrkio]);
+    backend.stdout.on('data', (data) => {
+        console.log('backend stdout: ' + data);
+    });
+    backend.stderr.on('data', (data) => {
+        console.log('backend stderr: ' + data);
+    });
+    win = new BrowserWindow({width: 800, height: 600});
+    win.loadURL('file://' + __dirname + '/pre_index.html');
+    win.on('closed', () => {
+        win = null;
+        backend.kill('SIGINT');
+    });
+}
 
 app.on("window-all-closed", function() {
   app.quit();
 });
 
-app.on("ready", function() {
-    var clrkio = __dirname + "/clrkio.py";
-    var backend = require("child_process").spawn("python", [clrkio]);
-    backend.stdout.on("data", function(data) {
-        console.log("backend stdout: " + data);
-    });
-    backend.stderr.on("data", function(data) {
-        console.log("backend stderr: " + data);
-    });
-
-    mainWindow = new browserWindow({width: 800, height: 600});
-    mainWindow.loadUrl("file://" + __dirname + "/pre_index.html");
-
-    // Open developer tools
-    // mainWindow.openDevTools();
-
-    // Emitted when the window is closed.
-    mainWindow.on("closed", function() {
-        mainWindow = null;
-        backend.kill("SIGINT");
-    });
-});
+app.on('ready', createWindow);

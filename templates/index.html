@@ -3,8 +3,8 @@
 {% block body %}
     <h1>Member list</h1>
     <ul>
-        {% for m in members %}
-            <li>{{ m.full_name }}</li>
+        {% for m in members|sort(attribute='full_name') %}
+            <li><a href="{{ url_for('member_detail', individual_id=m.individual_id) }}">{{ m.full_name }}</a></li>
         {% endfor %}
     </ul>
     <a href="{{ url_for('pre_sync') }}">sync</a>

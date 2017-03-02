@@ -1,10 +1,14 @@
 import datetime
 import flask
+import logging
 import os
 import pathlib
 import requests
 import sqlite3
 
+from typing import Dict, List
+
+log = logging.getLogger(__name__)
 app = flask.Flask(__name__)
 
 
@@ -12,10 +16,9 @@ def api_ts_to_date(api_timestamp):
     if api_timestamp is None:
         rv = None
     else:
-        rv = datetime.date.fromtimestamp(api_timestamp / 1000)
+        rv = datetime.date(1970, 1, 1) + datetime.timedelta(seconds=api_timestamp / 1000)
         if rv.year == 1:
-            invalid = 'The timestamp {!r} converted to {!r}, which is invalid'
-            log(invalid.format(api_timestamp, rv))
+            log.warning('The timestamp {!r} converted to {!r}, which is invalid'.format(api_timestamp, rv))
             rv = None
     return rv
 
@@ -38,7 +41,7 @@ def to_db(d):
     elif isinstance(d, datetime.date):
         rv = str(d)
     else:
-        log('I do not know how to convert {!r} for the database'.format(d))
+        log.warning('I do not know how to convert {!r} for the database'.format(d))
         rv = None
     return rv
 
@@ -62,12 +65,12 @@ class Household(object):
             missing_keys = self.required_data_keys.difference(h_keys)
             err = ('While processing household {!r}, I did not find one or '
                    'more data keys that I expected to find: {}')
-            log(err.format(data.get('householdName'), missing_keys))
+            log.warning(err.format(data.get('householdName'), missing_keys))
         if not h_keys.issubset(self.allowed_data_keys):
             extra_keys = h_keys.difference(self.allowed_data_keys)
             err = ('While processing household {!r}, I found one or more data '
                    'keys that I did not expect to find: {}')
-            log(err.format(data.get('householdName'), extra_keys))
+            log.warning(err.format(data.get('householdName'), extra_keys))
         self.children = data.get('children')
         self.couple_name = data.get('coupleName')
         self.description_1 = data.get('desc1')
@@ -143,12 +146,12 @@ class Household(object):
             missing_keys = cls.required_indiv_keys.difference(d_keys)
             err = ('While processing member of household {!r}, I did not find '
                    'one or more data keys that I expected to find: {}')
-            log(err.format(data.get('fullName'), missing_keys))
+            log.warning(err.format(data.get('fullName'), missing_keys))
         if not d_keys.issubset(cls.allowed_indiv_keys):
             extra_keys = d_keys.difference(cls.allowed_indiv_keys)
             err = ('While processing member of household {!r}, I found one or '
                    'more data keys that I did not expect to find: {}')
-            log(err.format(data.get('fullName'), extra_keys))
+            log.warning(err.format(data.get('fullName'), extra_keys))
         individual = {
             'email': data.get('email'), 'full_name': data.get('fullName'),
             'given_name': data.get('givenName'),
@@ -189,47 +192,30 @@ class Household(object):
 
 
 class Member(object):
-    allowed_data_keys = {'baptismDate', 'baptismRatified', 'birthCountry',
-                         'birthPlace', 'birthdate', 'bornInCovenant',
-                         'confirmationDate', 'confirmationRatified',
-                         'endowmentDate', 'endowmentRatified',
-                         'endowmentTemple', 'fathersBirthDate', 'fathersName',
-                         'fromAddressUnknown', 'fullName', 'gender',
-                         'individualId', 'isSpouseMember', 'maidenName',
-                         'marriageDate', 'marriagePlace', 'memberId',
-                         'missionCountry', 'missionLanguage',
-                         'mothersBirthDate', 'mothersName', 'movedInDate',
-                         'notAccountable', 'priesthoodOffices', 'priorUnit',
-                         'priorUnitMoveDate', 'priorUnitName',
-                         'recommendExpirationDate', 'recommendStatus',
-                         'sealedParentsDate', 'sealedSpouseDate',
-                         'sealedSpouseTemple', 'sealedToParentsTemple',
-                         'sealingToParentsRatified', 'sealingToSpouseRatified',
-                         'spouseBirthDate', 'spouseDeceased', 'spouseMember',
+    allowed_data_keys = {'baptismDate', 'baptismRatified', 'birthCountry', 'birthPlace', 'birthdate', 'bornInCovenant',
+                         'confirmationDate', 'confirmationRatified', 'endowmentDate', 'endowmentRatified',
+                         'endowmentTemple', 'fathersBirthDate', 'fathersName', 'fromAddressUnknown', 'fullName',
+                         'gender', 'individualId', 'isSpouseMember', 'maidenName', 'marriageDate', 'marriagePlace',
+                         'memberId', 'missionCountry', 'missionLanguage', 'mothersBirthDate', 'mothersName',
+                         'movedInDate', 'notAccountable', 'priesthoodOffices', 'priorUnit', 'priorUnitMoveDate',
+                         'priorUnitName', 'recommendExpirationDate', 'recommendStatus', 'sealedParentsDate',
+                         'sealedSpouseDate', 'sealedSpouseTemple', 'sealedToParentsTemple', 'sealingToParentsRatified',
+                         'sealingToSpouseRatified', 'spouseBirthDate', 'spouseDeceased', 'spouseMember',
                          'spouseMemberId', 'spouseName'}
-    required_data_keys = {'baptismRatified', 'birthdate', 'bornInCovenant',
-                          'confirmationRatified', 'endowmentRatified',
-                          'fathersName', 'fromAddressUnknown', 'fullName',
-                          'gender', 'individualId', 'memberId', 'mothersName',
-                          'notAccountable', 'priesthoodOffices',
-                          'sealingToParentsRatified', 'sealingToSpouseRatified'}
-    allowed_po_keys = {'ordinationDate', 'performedBy', 'performedByMrn',
-                       'priesthoodOfficeCode', 'ratified'}
-    required_po_keys = {'ordinationDate', 'performedBy', 'priesthoodOfficeCode',
-                        'ratified'}
+    required_data_keys = {'birthdate', 'fromAddressUnknown', 'fullName', 'gender', 'individualId'}
+    allowed_po_keys = {'ordinationDate', 'performedBy', 'performedByMrn', 'priesthoodOfficeCode', 'ratified'}
+    required_po_keys = {'ordinationDate', 'performedBy', 'priesthoodOfficeCode', 'ratified'}
 
     def __init__(self, data):
         m_keys = set(data.keys())
         if not self.required_data_keys.issubset(m_keys):
             missing_keys = self.required_data_keys.difference(m_keys)
-            err = ('While processing member {!r}, I did not find one or more '
-                   'data keys that I expected to find: {}')
-            log(err.format(data.get('fullName'), missing_keys))
+            err = 'While processing member {!r}, I did not find one or more data keys that I expected to find: {}'
+            log.warning(err.format(data.get('fullName'), missing_keys))
         if not m_keys.issubset(self.allowed_data_keys):
             extra_keys = m_keys.difference(self.allowed_data_keys)
-            err = ('While processing member {!r}, I found one or more data '
-                   'keys that I did not expect to find: {}')
-            log(err.format(data.get('fullName'), extra_keys))
+            err = 'While processing member {!r}, I found one or more data keys that I did not expect to find: {}'
+            log.warning(err.format(data.get('fullName'), extra_keys))
         self.baptism_date = api_ts_to_date(data.get('baptismDate'))
         self.baptism_ratified = data.get('baptismRatified')
         self.birth_country = data.get('birthCountry')
@@ -283,21 +269,21 @@ class Member(object):
         self.spouse_name = data.get('spouseName')
         self.surname = None
 
-        self.priesthood_offices = []
-        for po in data.get('priesthoodOffices'):
+        self.priesthood_offices = []  # type: List[Dict]
+        for po in data.get('priesthoodOffices', []):
             po_keys = set(po.keys())
             if not self.required_po_keys.issubset(po_keys):
                 missing_keys = self.required_po_keys.difference(po_keys)
                 err = ('While processing member {!r}, I did not find one or '
                        'more priesthood office data keys that I expected to '
                        'find: {}')
-                log(err.format(data.get('fullName'), missing_keys))
+                log.warning(err.format(data.get('fullName'), missing_keys))
             if not po_keys.issubset(self.allowed_po_keys):
                 extra_keys = po_keys.difference(self.allowed_po_keys)
                 err = ('While processing member {!r}, I found one or more '
                        'priesthood office data keys that I did not expect to '
                        'find: {}')
-                log(err.format(data.get('fullName'), extra_keys))
+                log.warning(err.format(data.get('fullName'), extra_keys))
             office = {
                 'ordination_date': api_ts_to_date(po.get('ordinationDate')),
                 'performed_by': po.get('performedBy'),
@@ -313,12 +299,12 @@ class Member(object):
 
     @staticmethod
     def get_all_enabled():
-        sql = 'SELECT * FROM members WHERE enabled = 1 ORDER BY full_name'
+        sql = 'SELECT * FROM members WHERE enabled = 1'
         return query_db(sql)
 
     @staticmethod
     def get_all_disabled():
-        sql = 'SELECT * FROM members WHERE enabled = 0 ORDER BY full_name'
+        sql = 'SELECT * FROM members WHERE enabled = 0'
         return query_db(sql)
 
     @staticmethod
@@ -330,7 +316,7 @@ class Member(object):
         query_db('DELETE FROM members WHERE enabled = 0')
 
     def insert(self):
-        log('Inserting {!r} into the database'.format(self.full_name))
+        log.debug('Inserting {!r} into the database'.format(self.full_name))
         sql = ('INSERT INTO members (baptism_date, baptism_ratified, '
                'birth_country, birth_place, birthdate, born_in_covenant, '
                'confirmation_date, confirmation_ratified, email, enabled, '
@@ -436,16 +422,10 @@ class Member(object):
 
 
 def get_conf_dir():
-    conf_dir = pathlib.Path(os.environ.get('HOME')).resolve() / '.config/clrkio'
+    conf_dir = pathlib.Path(os.environ.get('USERPROFILE')).resolve() / '.config/clrkio'
     if not conf_dir.exists():
         conf_dir.mkdir(parents=True)
     return conf_dir
-
-
-def log(message):
-    log_file = get_conf_dir() / 'clrkio.log'
-    with log_file.open(mode='a') as f:
-        f.write('{} {}\n'.format(datetime.datetime.utcnow(), message))
 
 
 def get_db_path():
@@ -473,9 +453,9 @@ def query_db(query, args=None, one=False):
 @app.before_first_request
 def init_db():
     if get_db_path().exists():
-        log('The database at {} already exists'.format(get_db_path()))
+        log.debug('The database at {} already exists'.format(get_db_path()))
         return
-    log('Initializing the database at {}'.format(get_db_path()))
+    log.debug('Initializing the database at {}'.format(get_db_path()))
     with app.app_context():
         db = get_db()
         with app.open_resource('schema.sql', mode='r') as f:
@@ -483,7 +463,7 @@ def init_db():
 
 
 @app.teardown_appcontext
-def close_connection(exception):
+def close_connection(_):
     db = getattr(flask.g, '_database', None)
     if db is not None:
         db.close()
@@ -508,25 +488,26 @@ def pre_sync():
 
 @app.route('/sync', methods=['POST'])
 def sync():
-    log('Starting sync')
+    log.debug('Starting sync')
     s = requests.Session()
     data = {'username': flask.request.form['username'],
             'password': flask.request.form['password']}
     signin_url = 'https://signin.lds.org/login.html'
-    log('Attempting to sign in at ' + signin_url)
+    log.debug('Attempting to sign in at ' + signin_url)
     s.post(signin_url, data=data)
     user_detail_url = ('https://www.lds.org/mobiledirectory/services/v2/'
                        'ldstools/current-user-detail')
-    log('Attempting to get current user details at ' + user_detail_url)
+    log.debug('Attempting to get current user details at ' + user_detail_url)
     user_detail_response = s.get(user_detail_url)
     user_detail = user_detail_response.json()
     home_unit_number = user_detail['homeUnitNbr']
     params = {'unitNumber': home_unit_number}
     records_url = ('https://www.lds.org/mls/mbr/services/report/'
                    'membership-records')
-    log('Attempting to get membership records from ' + records_url)
+    log.debug('Attempting to get membership records from ' + records_url)
     s.headers['accept'] = 'application/json'
     r = s.get(records_url, params=params).json()
+    log.debug(r)
     added = []
     Member.disable_all()
     for member in r:
@@ -542,7 +523,7 @@ def sync():
 
     hh_url = ('https://www.lds.org/mobiledirectory/services/v2/ldstools/'
               'member-detaillist-with-callings/' + str(home_unit_number))
-    log('Attempting to get household information from ' + hh_url)
+    log.debug('Attempting to get household information from ' + hh_url)
     r = s.get(hh_url).json()
     Household.disable_all()
     for household in r['households']:
@@ -553,12 +534,13 @@ def sync():
         else:
             h.update()
     Household.prune_disabled()
-    log('Sync done')
+    log.debug('Sync done')
 
     return flask.render_template('sync.html', added=added, removed=removed)
 
 
 def main():
+    logging.basicConfig(format='%(asctime)s | %(levelname)s | %(message)s', level='DEBUG')
     app.run(host='0.0.0.0', debug=True)
 
 if __name__ == '__main__':
