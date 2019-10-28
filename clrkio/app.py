@@ -1,3 +1,4 @@
+import clrkio.settings
 import datetime
 import flask
 import logging
@@ -5,9 +6,11 @@ import os
 import pathlib
 import requests
 import sqlite3
+import sys
 
 from typing import Dict, List
 
+settings = clrkio.settings.Settings()
 log = logging.getLogger(__name__)
 app = flask.Flask(__name__)
 
@@ -450,7 +453,6 @@ def query_db(query, args=None, one=False):
     return (rows[0] if rows else None) if one else rows
 
 
-@app.before_first_request
 def init_db():
     if get_db_path().exists():
         log.debug('The database at {} already exists'.format(get_db_path()))
@@ -462,17 +464,23 @@ def init_db():
             db.cursor().executescript(f.read())
 
 
-@app.teardown_appcontext
-def close_connection(_):
-    db = getattr(flask.g, '_database', None)
-    if db is not None:
-        db.close()
-
-
 @app.route('/')
 def index():
     members = Member.get_all_enabled()
     return flask.render_template('index.html', members=members)
+
+
+@app.route('/birthdays.csv')
+def birthdays_csv():
+    s = requests.Session()
+    data = {'username': settings.church_username, 'password': settings.church_password}
+    signin_url = 'https://signin.lds.org/login.html'
+    log.debug(f'Attempting to sign in at {signin_url}')
+    s.post(signin_url, data=data)
+    user_detail_url = 'https://www.lds.org/mobiledirectory/services/v2/ldstools/current-user-detail'
+    log.debug(f'Attempting to get current user details at {user_detail_url}')
+    user_detail_response = s.get(user_detail_url)
+    return 'OK'
 
 
 @app.route('/members/<int:individual_id>')
@@ -540,8 +548,9 @@ def sync():
 
 
 def main():
-    logging.basicConfig(format='%(asctime)s | %(levelname)s | %(message)s', level='DEBUG')
+    logging.basicConfig(format=settings.log_format, level=settings.log_level, stream=sys.stdout)
     app.run(host='0.0.0.0', debug=True)
+
 
 if __name__ == '__main__':
     main()

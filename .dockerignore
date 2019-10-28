@@ -1,4 +1,4 @@
+.git
+.gitignore
 .idea
-*.json
-*.mitmdump
 docker-compose.override.yml
