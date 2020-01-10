@@ -10,10 +10,10 @@ services:
       - 5000:5000
 
   postgres:
-    image: postgres:11.5-alpine
+    image: postgres:11.6-alpine
     environment:
-      POSTGRES_PASSWORD: postgres
       PGDATA: /var/lib/postgresql/data/11
+      POSTGRES_PASSWORD: postgres
     ports:
       - 5432:5432
     volumes:
