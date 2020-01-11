@@ -2,7 +2,8 @@ import clrkio.settings
 import datetime
 import fort
 
-from typing import List
+from typing import Dict, List
+
 
 class Database(fort.PostgresDatabase):
     _version: int = None
@@ -48,11 +49,44 @@ class Database(fort.PostgresDatabase):
 
     # members
 
+    def pre_sync_members(self):
+        sql = '''
+            UPDATE members SET synced = FALSE WHERE synced IS TRUE
+        '''
+        self.u(sql)
+
+    def post_sync_members(self):
+        sql = '''
+            UPDATE members SET visible = FALSE WHERE synced IS FALSE
+        '''
+        self.u(sql)
+
+    def sync_member(self, params: Dict):
+        existing = self.get_member_by_id(params)
+        if existing is None:
+            sql = '''
+                INSERT INTO members (individual_id, name, birthday, email, synced, visible)
+                VALUES (%(individual_id)s, %(name)s, %(birthday)s, %(email)s, TRUE, TRUE)
+            '''
+        else:
+            sql = '''
+                UPDATE members
+                SET name = %(name)s, birthday = %(birthday)s, email = %(email)s, synced = TRUE, visible = TRUE
+                WHERE individual_id = %(individual_id)s
+            '''
+        self.u(sql, params)
+
     def get_all_members(self):
         return []
 
-    def get_member_by_id(self, _id):
-        return {}
+    def get_member_by_id(self, params):
+        sql = '''
+            SELECT individual_id, name, birthday, email
+            FROM members
+            WHERE individual_id = %(individual_id)s
+            AND visible IS TRUE
+        '''
+        return self.q_one(sql, params)
 
     # metadata and migrations
 
@@ -94,7 +128,9 @@ class Database(fort.PostgresDatabase):
                     individual_id bigint PRIMARY KEY,
                     name text,
                     birthday date,
-                    email text
+                    email text,
+                    visible boolean,
+                    synced boolean
                 )
             ''')
             self.add_schema_version(1)
