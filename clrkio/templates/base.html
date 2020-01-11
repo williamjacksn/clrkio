@@ -1,12 +1,60 @@
 <!doctype html>
-<html>
-    <head>
-        {% block head %}
-        <title>{% block title %}Clrkio{% endblock %}</title>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css"
+          integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='local.css') }}">
+    <title>{% block title %}Clrkio{% endblock %}</title>
+    {% block end_of_head %}{% endblock %}
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row pt-2">
+        <div class="col-6">
+            {% block breadcrumb %}
+            <a class="btn btn-outline-dark" href="#">
+                <span class="oi oi-home"></span>
+                <strong>Clrkio</strong>
+            </a>
+            {% endblock %}
+        </div>
+        <div class="col-6">
+        {% block sign_in_out %}
+            <a class="btn btn-success float-right" href="{{ url_for('sign_in') }}">
+                <span class="oi oi-person"></span>
+                Sign in
+            </a>
         {% endblock %}
-    </head>
-    <body>
-        {% block body %}
-        {% endblock %}
-    </body>
+        </div>
+    </div>
+
+    {% block main_content %}{% endblock %}
+
+    <div class="row py-2">
+        <div class="col-12">
+            <hr>
+            <small class="text-muted">
+                {{ g.settings.version }}
+                {% if g.settings.debug_layout %}
+                    <span class="d-inline d-sm-none">xs</span>
+                    <span class="d-none d-sm-inline d-md-none">sm</span>
+                    <span class="d-none d-md-inline d-lg-none">md</span>
+                    <span class="d-none d-lg-inline d-xl-none">lg</span>
+                    <span class="d-none d-xl-inline">xl</span>
+                {% endif %}
+            </small>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js" integrity="sha384-xrRywqdh3PHs8keKZN+8zzc5TX0GRTLCcmivcbNJWm2rs5C8PRhcEn3czEjhAO9o" crossorigin="anonymous"></script>
+    {% block end_of_body %}{% endblock %}
+</div>
+
+</body>
 </html>

@@ -1,0 +1,14 @@
+{% extends 'one-up.html' %}
+
+{% block main_content %}
+    <div class="row pt-2">
+        <div class="col-12">
+            <h1>Not authorized</h1>
+            <p class="lead">You are not authorized to view this page.</p>
+            <p>Permission required: <code>{{ g.required_permission }}</code>.</p>
+            <p>
+                Contact <a href="mailto:{{ g.settings.support_email }}?subject=Help with {{ request.url }}">{{ g.settings.support_email }}</a> with questions.
+            </p>
+        </div>
+    </div>
+{% endblock %}

@@ -16,6 +16,7 @@ class Settings:
     church_tools_basic_auth_username: str
     church_tools_basic_auth_password: str
     db: str
+    debug_layout: bool
     log_format: str
     log_level: str
     openid_client_id: str
@@ -28,6 +29,7 @@ class Settings:
     scheme: str
     secret_key: str
     server_name: str
+    support_email: str
     version: str
     web_server_threads: int
 
@@ -38,6 +40,7 @@ class Settings:
         self.church_tools_api_key = os.getenv('CHURCH_TOOLS_API_KEY')
         self.church_tools_basic_auth_username = os.getenv('CHURCH_TOOLS_BASIC_AUTH_USERNAME')
         self.church_tools_basic_auth_password = os.getenv('CHURCH_TOOLS_BASIC_AUTH_PASSWORD')
+        self.debug_layout = as_bool(os.getenv('DEBUG_LAYOUT', 'False'))
         self.db = os.getenv('DB')
         self.log_format = os.getenv('LOG_FORMAT', '%(levelname)s [%(name)s] %(message)s')
         self.log_level = os.getenv('LOG_LEVEL', 'INFO')
@@ -50,6 +53,7 @@ class Settings:
         self.scheme = os.getenv('SCHEME', 'http')
         self.secret_key = os.getenv('SECRET_KEY')
         self.server_name = os.getenv('SERVER_NAME', f'localhost:{self.port}')
+        self.support_email = os.getenv('SUPPORT_EMAIL', 'none')
         self.version = os.getenv('APP_VERSION', 'unknown')
         self.web_server_threads = int(os.getenv('WEB_SERVER_THREADS', '4'))
 

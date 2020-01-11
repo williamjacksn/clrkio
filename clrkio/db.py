@@ -76,10 +76,13 @@ class Database(fort.PostgresDatabase):
             '''
         self.u(sql, params)
 
-    def get_all_members(self):
-        return []
+    def get_all_members(self) -> List[Dict]:
+        sql = '''
+            SELECT individual_id, name, birthday, email FROM members WHERE visible IS TRUE
+        '''
+        return self.q(sql)
 
-    def get_member_by_id(self, params):
+    def get_member_by_id(self, params) -> Dict:
         sql = '''
             SELECT individual_id, name, birthday, email
             FROM members

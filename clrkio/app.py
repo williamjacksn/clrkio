@@ -1,7 +1,7 @@
+import apscheduler.schedulers.background
 import clrkio.church
 import clrkio.db
 import clrkio.settings
-import datetime
 import flask
 import functools
 import jwt
@@ -15,6 +15,7 @@ import werkzeug.middleware.proxy_fix
 
 
 settings = clrkio.settings.Settings()
+scheduler = apscheduler.schedulers.background.BackgroundScheduler()
 
 app = flask.Flask(__name__)
 app.wsgi_app = werkzeug.middleware.proxy_fix.ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_port=1)
@@ -57,6 +58,7 @@ def before_request():
 
 
 @app.route('/')
+@permission_required('admin')
 def index():
     db: clrkio.db.Database = flask.g.db
     members = db.get_all_members()
@@ -116,12 +118,12 @@ def sign_out():
     return flask.redirect(flask.url_for('index'))
 
 
-def sync():
-    ct = clrkio.church.ChurchToolsClient(settings)
-    db = clrkio.db.Database(settings)
-    _data = ct.get_unit_members()
-    for h in _data.get('households'):
-        hoh = h.get('headOfHouse')
+# def sync():
+#     ct = clrkio.church.ChurchToolsClient(settings)
+#     db = clrkio.db.Database(settings)
+#     _data = ct.get_unit_members()
+#     for h in _data.get('households'):
+#         hoh = h.get('headOfHouse')
 
 
 def main():
