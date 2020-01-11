@@ -46,7 +46,7 @@ class Settings:
         self.openid_discovery_document = os.getenv('OPENID_DISCOVERY_DOCUMENT')
         self.permanent_sessions = as_bool(os.getenv('PERMANENT_SESSIONS', 'False'))
         self.port = int(os.getenv('PORT', '8080'))
-        self.reset_database = as_bool(os.getenv('RESET_DATABASE'))
+        self.reset_database = as_bool(os.getenv('RESET_DATABASE', 'False'))
         self.scheme = os.getenv('SCHEME', 'http')
         self.secret_key = os.getenv('SECRET_KEY')
         self.server_name = os.getenv('SERVER_NAME', f'localhost:{self.port}')

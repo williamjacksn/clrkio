@@ -1,3 +1,4 @@
+import clrkio.church
 import clrkio.db
 import clrkio.settings
 import datetime
@@ -42,17 +43,6 @@ def permission_required(permission: str):
         return decorated_function
 
     return decorator
-
-
-def api_ts_to_date(api_timestamp):
-    if api_timestamp is None:
-        rv = None
-    else:
-        rv = datetime.date(1970, 1, 1) + datetime.timedelta(seconds=api_timestamp / 1000)
-        if rv.year == 1:
-            app.logger.warning('The timestamp {!r} converted to {!r}, which is invalid'.format(api_timestamp, rv))
-            rv = None
-    return rv
 
 
 @app.before_request
@@ -124,6 +114,14 @@ def sign_in():
 def sign_out():
     flask.session.pop('email')
     return flask.redirect(flask.url_for('index'))
+
+
+def sync():
+    ct = clrkio.church.ChurchToolsClient(settings)
+    db = clrkio.db.Database(settings)
+    _data = ct.get_unit_members()
+    for h in _data.get('households'):
+        hoh = h.get('headOfHouse')
 
 
 def main():

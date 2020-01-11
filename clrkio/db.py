@@ -70,7 +70,7 @@ class Database(fort.PostgresDatabase):
 
     def reset(self):
         self.log.warning('Database reset requested, dropping all tables')
-        for table in ('permissions', 'schema_versions'):
+        for table in ('members', 'permissions', 'schema_versions'):
             self.u(f'DROP TABLE IF EXISTS {table} CASCADE')
 
     def migrate(self):
@@ -87,6 +87,14 @@ class Database(fort.PostgresDatabase):
                 CREATE TABLE permissions (
                     email text PRIMARY KEY,
                     permissions text
+                )
+            ''')
+            self.u('''
+                CREATE TABLE members (
+                    individual_id bigint PRIMARY KEY,
+                    name text,
+                    birthday date,
+                    email text
                 )
             ''')
             self.add_schema_version(1)
