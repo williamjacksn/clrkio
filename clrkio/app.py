@@ -118,12 +118,44 @@ def sign_out():
     return flask.redirect(flask.url_for('index'))
 
 
-# def sync():
-#     ct = clrkio.church.ChurchToolsClient(settings)
-#     db = clrkio.db.Database(settings)
-#     _data = ct.get_unit_members()
-#     for h in _data.get('households'):
-#         hoh = h.get('headOfHouse')
+def sync():
+    ct = clrkio.church.ChurchToolsClient(settings)
+    db = clrkio.db.Database(settings)
+    db.pre_sync_members()
+    _data = ct.get_unit_members()
+    for h in _data.get('households'):
+        hoh = h.get('headOfHouse')
+        if hoh.get('individualId', -1) > 0:
+            db.sync_member({
+                'individual_id': hoh.get('individualId'),
+                'name': hoh.get('preferredName'),
+                'birthday': hoh.get('birthDay'),
+                'email': hoh.get('email'),
+                'age_group': hoh.get('ageGroup'),
+                'gender': hoh.get('gender')
+            })
+        if 'spouse' in h:
+            sp = h.get('spouse')
+            if sp.get('individualId', -1) > 0:
+                db.sync_member({
+                    'individual_id': sp.get('individualId'),
+                    'name': sp.get('preferredName'),
+                    'birthday': sp.get('birthDay'),
+                    'email': sp.get('email'),
+                    'age_group': sp.get('ageGroup'),
+                    'gender': sp.get('gender')
+                })
+        for ch in h.get('children', []):
+            if ch.get('individualId', -1) > 0:
+                db.sync_member({
+                    'individual_id': ch.get('individualId'),
+                    'name': ch.get('preferredName'),
+                    'birthday': ch.get('birthDay'),
+                    'email': ch.get('email'),
+                    'age_group': ch.get('ageGroup'),
+                    'gender': ch.get('gender')
+                })
+    db.post_sync_members()
 
 
 def main():
@@ -143,5 +175,9 @@ def main():
 
     db.migrate()
     db.bootstrap_admin()
+
+    scheduler.start()
+    if settings.auto_sync:
+        scheduler.add_job(sync)
 
     waitress.serve(app, ident=None, port=settings.port, threads=settings.web_server_threads)

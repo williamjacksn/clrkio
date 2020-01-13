@@ -9,6 +9,7 @@ def as_bool(value: str) -> bool:
 
 
 class Settings:
+    auto_sync: bool
     bootstrap_admin: str
     church_username: str
     church_password: str
@@ -34,6 +35,7 @@ class Settings:
     web_server_threads: int
 
     def __init__(self):
+        self.auto_sync = as_bool(os.getenv('AUTO_SYNC', 'False'))
         self.bootstrap_admin = os.getenv('BOOTSTRAP_ADMIN')
         self.church_username = os.getenv('CHURCH_USERNAME')
         self.church_password = os.getenv('CHURCH_PASSWORD')

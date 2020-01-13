@@ -62,29 +62,31 @@ class Database(fort.PostgresDatabase):
         self.u(sql)
 
     def sync_member(self, params: Dict):
+        self.log.debug(f'Syncing member: {params.get("name")}')
         existing = self.get_member_by_id(params)
         if existing is None:
             sql = '''
-                INSERT INTO members (individual_id, name, birthday, email, synced, visible)
-                VALUES (%(individual_id)s, %(name)s, %(birthday)s, %(email)s, TRUE, TRUE)
+                INSERT INTO members (individual_id, name, birthday, email, age_group, gender, synced, visible)
+                VALUES (%(individual_id)s, %(name)s, %(birthday)s, %(email)s, %(age_group)s, %(gender)s, TRUE, TRUE)
             '''
         else:
             sql = '''
                 UPDATE members
-                SET name = %(name)s, birthday = %(birthday)s, email = %(email)s, synced = TRUE, visible = TRUE
+                SET name = %(name)s, birthday = %(birthday)s, email = %(email)s, age_group = %(age_group)s,
+                    gender = %(gender)s, synced = TRUE, visible = TRUE
                 WHERE individual_id = %(individual_id)s
             '''
         self.u(sql, params)
 
     def get_all_members(self) -> List[Dict]:
         sql = '''
-            SELECT individual_id, name, birthday, email FROM members WHERE visible IS TRUE
+            SELECT individual_id, name, birthday, email, age_group, gender FROM members WHERE visible IS TRUE
         '''
         return self.q(sql)
 
     def get_member_by_id(self, params) -> Dict:
         sql = '''
-            SELECT individual_id, name, birthday, email
+            SELECT individual_id, name, birthday, email, age_group, gender
             FROM members
             WHERE individual_id = %(individual_id)s
             AND visible IS TRUE
@@ -132,6 +134,8 @@ class Database(fort.PostgresDatabase):
                     name text,
                     birthday date,
                     email text,
+                    age_group text,
+                    gender text,
                     visible boolean,
                     synced boolean
                 )
