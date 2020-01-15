@@ -2,6 +2,8 @@ import apscheduler.schedulers.background
 import clrkio.church
 import clrkio.db
 import clrkio.settings
+import collections
+import datetime
 import flask
 import functools
 import jwt
@@ -118,44 +120,45 @@ def sign_out():
     return flask.redirect(flask.url_for('index'))
 
 
+def sync_one(member_data):
+    db = clrkio.db.Database(settings)
+    individual_id = member_data.get('individualId', -1)
+    if individual_id > 0:
+        return db.sync_member({
+            'individual_id': member_data.get('individualId'),
+            'name': member_data.get('preferredName'),
+            'birthday': datetime.date.fromisoformat(member_data.get('birthDay')),
+            'email': member_data.get('email'),
+            'age_group': member_data.get('ageGroup'),
+            'gender': member_data.get('gender')
+        })
+
+
 def sync():
+    sync_id = uuid.uuid4()
+    start = datetime.datetime.utcnow()
+    app.logger.info(f'Starting sync at {start}')
     ct = clrkio.church.ChurchToolsClient(settings)
+    _data = ct.get_unit_members()
     db = clrkio.db.Database(settings)
     db.pre_sync_members()
-    _data = ct.get_unit_members()
+    sync_results = []
     for h in _data.get('households'):
-        hoh = h.get('headOfHouse')
-        if hoh.get('individualId', -1) > 0:
-            db.sync_member({
-                'individual_id': hoh.get('individualId'),
-                'name': hoh.get('preferredName'),
-                'birthday': hoh.get('birthDay'),
-                'email': hoh.get('email'),
-                'age_group': hoh.get('ageGroup'),
-                'gender': hoh.get('gender')
-            })
+        sync_result = sync_one(h.get('headOfHouse'))
+        if sync_result is not None:
+            sync_results.append(sync_result)
         if 'spouse' in h:
-            sp = h.get('spouse')
-            if sp.get('individualId', -1) > 0:
-                db.sync_member({
-                    'individual_id': sp.get('individualId'),
-                    'name': sp.get('preferredName'),
-                    'birthday': sp.get('birthDay'),
-                    'email': sp.get('email'),
-                    'age_group': sp.get('ageGroup'),
-                    'gender': sp.get('gender')
-                })
+            sync_result = sync_one(h.get('spouse'))
+            if sync_result is not None:
+                sync_results.append(sync_result)
         for ch in h.get('children', []):
-            if ch.get('individualId', -1) > 0:
-                db.sync_member({
-                    'individual_id': ch.get('individualId'),
-                    'name': ch.get('preferredName'),
-                    'birthday': ch.get('birthDay'),
-                    'email': ch.get('email'),
-                    'age_group': ch.get('ageGroup'),
-                    'gender': ch.get('gender')
-                })
-    db.post_sync_members()
+            sync_results.append(sync_one(ch))
+    sync_results.extend([{'result': 'removed', 'data': r} for r in db.post_sync_members()])
+    end = datetime.datetime.utcnow()
+    app.logger.info(f'Ending sync at {end}, duration {end - start}')
+    app.logger.debug(sync_results)
+    stats = collections.Counter([r.get('result') for r in sync_results])
+    app.logger.info(stats)
 
 
 def main():

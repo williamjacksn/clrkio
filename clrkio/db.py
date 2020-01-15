@@ -55,41 +55,62 @@ class Database(fort.PostgresDatabase):
         '''
         self.u(sql)
 
-    def post_sync_members(self):
+    def post_sync_members(self) -> List[Dict]:
         sql = '''
-            UPDATE members SET visible = FALSE WHERE synced IS FALSE
+            SELECT individual_id, name, birthday, email, age_group, gender
+            FROM members
+            WHERE synced IS FALSE
+        '''
+        removed = self.q(sql)
+        self.log.debug(f'Removing {len(removed)} members')
+        sql = '''
+            DELETE FROM members WHERE synced IS FALSE
         '''
         self.u(sql)
+        return removed
 
-    def sync_member(self, params: Dict):
-        self.log.debug(f'Syncing member: {params.get("name")}')
+    def sync_member(self, params: Dict) -> Dict:
+        individual_id = params.get('individual_id')
+        self.log.debug(f'Syncing member: {individual_id}')
+        result = {'result': 'no-change', 'data': params.copy()}
         existing = self.get_member_by_id(params)
+        self.log.debug(f'existing: {existing}')
         if existing is None:
             sql = '''
-                INSERT INTO members (individual_id, name, birthday, email, age_group, gender, synced, visible)
-                VALUES (%(individual_id)s, %(name)s, %(birthday)s, %(email)s, %(age_group)s, %(gender)s, TRUE, TRUE)
+                INSERT INTO members (individual_id, name, birthday, email, age_group, gender, synced)
+                VALUES (%(individual_id)s, %(name)s, %(birthday)s, %(email)s, %(age_group)s, %(gender)s, TRUE)
             '''
+            result['result'] = 'added'
         else:
             sql = '''
                 UPDATE members
                 SET name = %(name)s, birthday = %(birthday)s, email = %(email)s, age_group = %(age_group)s,
-                    gender = %(gender)s, synced = TRUE, visible = TRUE
+                    gender = %(gender)s, synced = TRUE
                 WHERE individual_id = %(individual_id)s
             '''
+            changes = []
+            for field in ('name', 'birthday', 'email', 'age_group', 'gender'):
+                existing_value = existing.get(field)
+                new_value = params.get(field)
+                if not existing_value == new_value:
+                    self.log.debug(f'{individual_id} {field}: {existing_value} -> {new_value}')
+                    result['result'] = 'changed'
+                    changes.append({'field': field, 'old': existing_value, 'new': new_value})
+            result['changes'] = changes
         self.u(sql, params)
+        return result
 
     def get_all_members(self) -> List[Dict]:
         sql = '''
-            SELECT individual_id, name, birthday, email, age_group, gender FROM members WHERE visible IS TRUE
+            SELECT individual_id, name, birthday, email, age_group, gender FROM members
         '''
         return self.q(sql)
 
     def get_member_by_id(self, params) -> Dict:
         sql = '''
-            SELECT individual_id, name, birthday, email, age_group, gender
+            SELECT individual_id, name, birthday, email, age_group, gender, synced
             FROM members
             WHERE individual_id = %(individual_id)s
-            AND visible IS TRUE
         '''
         return self.q_one(sql, params)
 
@@ -136,7 +157,6 @@ class Database(fort.PostgresDatabase):
                     email text,
                     age_group text,
                     gender text,
-                    visible boolean,
                     synced boolean
                 )
             ''')
