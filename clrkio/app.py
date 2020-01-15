@@ -135,7 +135,6 @@ def sync_one(member_data):
 
 
 def sync():
-    sync_id = uuid.uuid4()
     start = datetime.datetime.utcnow()
     app.logger.info(f'Starting sync at {start}')
     ct = clrkio.church.ChurchToolsClient(settings)
@@ -159,6 +158,10 @@ def sync():
     app.logger.debug(sync_results)
     stats = collections.Counter([r.get('result') for r in sync_results])
     app.logger.info(stats)
+    if stats['added'] + stats['changed'] + stats['removed'] > 0:
+        with app.app_context():
+            sync_report = flask.render_template('email/sync-report.jinja2', sync_time=start, sync_results=sync_results)
+            app.logger.info(sync_report)
 
 
 def main():
