@@ -1,0 +1,40 @@
+<p>The following changes in membership records occurred during the last sync.</p>
+
+<p>Sync time: {{ sync_time.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+
+<h3>Records added</h3>
+
+{% for r in sync_results if r.result == 'added' %}
+    <h4>{{ r.data.name }}</h4>
+    <p>
+        Born {{ r.data.birthday }}<br>
+        {{ r.data.age_group|capitalize }}, {{ r.data.gender|capitalize }}<br>
+        {{ r.data.email if r.data.email }}
+    </p>
+{% else %}
+    <p>No records added</p>
+{% endfor %}
+
+<h3>Records updated</h3>
+
+{% for r in sync_results if r.result == 'changed' %}
+    <h4>{{ r.data.name }}</h4>
+    <p>
+    {% for change in r.changes %}
+        {{ change.field }}: {{ change.old }} &rarr; {{ change.new }}<br>
+    {% endfor %}
+    </p>
+{% else %}
+    <p>No records updated</p>
+{% endfor %}
+
+<h3>Records removed</h3>
+
+{% for r in sync_results if r.result == 'removed' %}
+    <h4>{{ r.data.name }}</h4>
+    <p>
+        Born {{ r.data.birthday }}
+    </p>
+{% else %}
+    <p>No records removed</p>
+{% endfor %}

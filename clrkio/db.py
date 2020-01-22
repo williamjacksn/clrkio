@@ -47,6 +47,13 @@ class Database(fort.PostgresDatabase):
     def has_permission(self, email: str, permission: str) -> bool:
         return permission in self.get_permissions(email)
 
+    def get_member_changes_recipients(self):
+        sql = '''
+            SELECT email FROM permissions WHERE permissions LIKE %(permission_like)s
+        '''
+        params = {'permission_like': '%member-changes%'}
+        return self.q(sql, params)
+
     # members
 
     def pre_sync_members(self):

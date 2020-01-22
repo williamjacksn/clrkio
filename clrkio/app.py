@@ -62,9 +62,7 @@ def before_request():
 @app.route('/')
 @permission_required('admin')
 def index():
-    db: clrkio.db.Database = flask.g.db
-    members = db.get_all_members()
-    return flask.render_template('index.html', members=members)
+    return flask.render_template('index.html')
 
 
 @app.route('/authorize')
@@ -134,6 +132,18 @@ def sync_one(member_data):
         })
 
 
+def send_email(to: str, body: str):
+    app.logger.debug(f'Sending email to {to}')
+    auth = ('api', settings.mailgun_api_key)
+    data = {
+        'from': settings.mailgun_sender,
+        'to': to,
+        'subject': 'Recent changes to membership records',
+        'html': body
+    }
+    requests.post(f'https://api.mailgun.net/v3/{settings.mailgun_domain}/messages', auth=auth, data=data)
+
+
 def sync():
     start = datetime.datetime.utcnow()
     app.logger.info(f'Starting sync at {start}')
@@ -160,8 +170,9 @@ def sync():
     app.logger.info(stats)
     if stats['added'] + stats['changed'] + stats['removed'] > 0:
         with app.app_context():
-            sync_report = flask.render_template('email/sync-report.jinja2', sync_time=start, sync_results=sync_results)
-            app.logger.info(sync_report)
+            sync_report = flask.render_template('email/sync-report.html', sync_time=start, sync_results=sync_results)
+            for row in db.get_member_changes_recipients():
+                send_email(row.get('email'), sync_report)
 
 
 def main():
@@ -185,5 +196,6 @@ def main():
     scheduler.start()
     if settings.auto_sync:
         scheduler.add_job(sync)
+        scheduler.add_job(sync, 'interval', hours=24)
 
     waitress.serve(app, ident=None, port=settings.port, threads=settings.web_server_threads)

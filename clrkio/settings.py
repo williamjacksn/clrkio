@@ -20,6 +20,9 @@ class Settings:
     debug_layout: bool
     log_format: str
     log_level: str
+    mailgun_api_key: str
+    mailgun_domain: str
+    mailgun_sender: str
     openid_client_id: str
     openid_client_secret: str
     openid_discovery_document: str
@@ -46,6 +49,9 @@ class Settings:
         self.db = os.getenv('DB')
         self.log_format = os.getenv('LOG_FORMAT', '%(levelname)s [%(name)s] %(message)s')
         self.log_level = os.getenv('LOG_LEVEL', 'INFO')
+        self.mailgun_api_key = os.getenv('MAILGUN_API_KEY')
+        self.mailgun_domain = os.getenv('MAILGUN_DOMAIN')
+        self.mailgun_sender = os.getenv('MAILGUN_SENDER')
         self.openid_client_id = os.getenv('OPENID_CLIENT_ID')
         self.openid_client_secret = os.getenv('OPENID_CLIENT_SECRET')
         self.openid_discovery_document = os.getenv('OPENID_DISCOVERY_DOCUMENT')
