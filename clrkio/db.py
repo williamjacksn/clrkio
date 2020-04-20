@@ -22,7 +22,7 @@ class Database(fort.PostgresDatabase):
         self.add_permission(self.settings.bootstrap_admin, 'admin')
 
     def get_users(self):
-        sql = 'SELECT email, permissions FROM permissions ORDER BY email'
+        sql = 'select email, permissions from permissions order by email'
         for record in self.q(sql):
             yield {'email': record['email'], 'permissions': record['permissions'].split()}
 
@@ -32,7 +32,7 @@ class Database(fort.PostgresDatabase):
         self.set_permissions(email, sorted(current_permissions))
 
     def get_permissions(self, email: str) -> List[str]:
-        sql = 'SELECT permissions FROM permissions WHERE email = %(email)s'
+        sql = 'select permissions from permissions where email = %(email)s'
         permissions = self.q_val(sql, {'email': email})
         if permissions is None:
             return []
@@ -40,16 +40,16 @@ class Database(fort.PostgresDatabase):
 
     def set_permissions(self, email: str, permissions: List[str]):
         params = {'email': email, 'permissions': ' '.join(sorted(set(permissions)))}
-        self.u('DELETE FROM permissions WHERE email = %(email)s', params)
+        self.u('delete from permissions where email = %(email)s', params)
         if permissions:
-            self.u('INSERT INTO permissions (email, permissions) VALUES (%(email)s, %(permissions)s)', params)
+            self.u('insert into permissions (email, permissions) values (%(email)s, %(permissions)s)', params)
 
     def has_permission(self, email: str, permission: str) -> bool:
         return permission in self.get_permissions(email)
 
     def get_member_changes_recipients(self):
         sql = '''
-            SELECT email FROM permissions WHERE permissions LIKE %(permission_like)s
+            select email from permissions where permissions like %(permission_like)s
         '''
         params = {'permission_like': '%member-changes%'}
         return self.q(sql, params)
@@ -58,20 +58,20 @@ class Database(fort.PostgresDatabase):
 
     def pre_sync_members(self):
         sql = '''
-            UPDATE members SET synced = FALSE WHERE synced IS TRUE
+            update members set synced = false where synced is true
         '''
         self.u(sql)
 
     def post_sync_members(self) -> List[Dict]:
         sql = '''
-            SELECT individual_id, name, birthday, email, age_group, gender
-            FROM members
-            WHERE synced IS FALSE
+            select individual_id, name, birthday, email, age_group, gender
+            from members
+            where synced is false
         '''
         removed = self.q(sql)
         self.log.debug(f'Removing {len(removed)} members')
         sql = '''
-            DELETE FROM members WHERE synced IS FALSE
+            delete from members where synced is false
         '''
         self.u(sql)
         return removed
@@ -84,19 +84,19 @@ class Database(fort.PostgresDatabase):
         self.log.debug(f'existing: {existing}')
         if existing is None:
             sql = '''
-                INSERT INTO members (
+                insert into members (
                     individual_id, name, birthday, email, phone, age_group, gender, synced
-                ) VALUES (
-                    %(individual_id)s, %(name)s, %(birthday)s, %(email)s, %(phone)s, %(age_group)s, %(gender)s, TRUE
+                ) values (
+                    %(individual_id)s, %(name)s, %(birthday)s, %(email)s, %(phone)s, %(age_group)s, %(gender)s, true
                 )
             '''
             result['result'] = 'added'
         else:
             sql = '''
-                UPDATE members
-                SET name = %(name)s, birthday = %(birthday)s, email = %(email)s, phone = %(phone)s,
-                    age_group = %(age_group)s, gender = %(gender)s, synced = TRUE
-                WHERE individual_id = %(individual_id)s
+                update members
+                set name = %(name)s, birthday = %(birthday)s, email = %(email)s, phone = %(phone)s,
+                    age_group = %(age_group)s, gender = %(gender)s, synced = true
+                where individual_id = %(individual_id)s
             '''
             changes = []
             for field in ('name', 'birthday', 'email', 'phone', 'age_group', 'gender'):
@@ -112,15 +112,15 @@ class Database(fort.PostgresDatabase):
 
     def get_all_members(self) -> List[Dict]:
         sql = '''
-            SELECT individual_id, name, birthday, email, age_group, gender FROM members
+            select individual_id, name, birthday, email, age_group, gender from members
         '''
         return self.q(sql)
 
     def get_member_by_id(self, params) -> Dict:
         sql = '''
-            SELECT individual_id, name, birthday, email, phone, age_group, gender, synced
-            FROM members
-            WHERE individual_id = %(individual_id)s
+            select individual_id, name, birthday, email, phone, age_group, gender, synced
+            from members
+            where individual_id = %(individual_id)s
         '''
         return self.q_one(sql, params)
 
@@ -129,8 +129,8 @@ class Database(fort.PostgresDatabase):
     def add_schema_version(self, schema_version: int):
         self._version = schema_version
         sql = '''
-            INSERT INTO schema_versions (schema_version, migration_timestamp)
-            VALUES (%(schema_version)s, %(migration_timestamp)s)
+            insert into schema_versions (schema_version, migration_timestamp)
+            values (%(schema_version)s, %(migration_timestamp)s)
         '''
         params = {
             'migration_timestamp': datetime.datetime.utcnow(),
@@ -141,27 +141,27 @@ class Database(fort.PostgresDatabase):
     def reset(self):
         self.log.warning('Database reset requested, dropping all tables')
         for table in ('members', 'permissions', 'schema_versions'):
-            self.u(f'DROP TABLE IF EXISTS {table} CASCADE')
+            self.u(f'drop table if exists {table} cascade')
 
     def migrate(self):
         self.log.info(f'Database schema version is {self.version}')
         if self.version < 1:
             self.log.info('Migrating database to schema version 1')
             self.u('''
-                CREATE TABLE schema_versions (
-                    schema_version integer PRIMARY KEY,
+                create table schema_versions (
+                    schema_version integer primary key,
                     migration_timestamp timestamp
                 )
             ''')
             self.u('''
-                CREATE TABLE permissions (
-                    email text PRIMARY KEY,
+                create table permissions (
+                    email text primary key,
                     permissions text
                 )
             ''')
             self.u('''
-                CREATE TABLE members (
-                    individual_id bigint PRIMARY KEY,
+                create table members (
+                    individual_id bigint primary key,
                     name text,
                     birthday date,
                     email text,
@@ -174,13 +174,13 @@ class Database(fort.PostgresDatabase):
         if self.version < 2:
             self.log.info('Migrating database to schema version 2')
             self.u('''
-                ALTER TABLE members
-                ADD COLUMN phone text
+                alter table members
+                add column phone text
             ''')
             self.add_schema_version(2)
 
     def _table_exists(self, table_name: str) -> bool:
-        sql = 'SELECT count(*) table_count FROM information_schema.tables WHERE table_name = %(table_name)s'
+        sql = 'select count(*) table_count from information_schema.tables where table_name = %(table_name)s'
         for record in self.q(sql, {'table_name': table_name}):
             if record['table_count'] == 0:
                 return False
@@ -191,7 +191,7 @@ class Database(fort.PostgresDatabase):
         if self._version is None:
             self._version = 0
             if self._table_exists('schema_versions'):
-                sql = 'SELECT max(schema_version) current_version FROM schema_versions'
+                sql = 'select max(schema_version) current_version from schema_versions'
                 current_version: int = self.q_val(sql)
                 if current_version is not None:
                     self._version = current_version
