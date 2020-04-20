@@ -91,7 +91,8 @@ def authorize():
 
 @app.route('/health-check')
 def health_check():
-    return 'ok'
+    db = clrkio.db.Database(settings)
+    return f'clrkio version {settings.version} / schema version {db.version}'
 
 
 @app.route('/sign-in')
