@@ -127,6 +127,7 @@ def sync_one(member_data):
             'name': member_data.get('preferredName'),
             'birthday': datetime.date.fromisoformat(member_data.get('birthDay')),
             'email': member_data.get('email'),
+            'phone': member_data.get('phone'),
             'age_group': member_data.get('ageGroup'),
             'gender': member_data.get('gender')
         })

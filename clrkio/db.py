@@ -84,19 +84,22 @@ class Database(fort.PostgresDatabase):
         self.log.debug(f'existing: {existing}')
         if existing is None:
             sql = '''
-                INSERT INTO members (individual_id, name, birthday, email, age_group, gender, synced)
-                VALUES (%(individual_id)s, %(name)s, %(birthday)s, %(email)s, %(age_group)s, %(gender)s, TRUE)
+                INSERT INTO members (
+                    individual_id, name, birthday, email, phone, age_group, gender, synced
+                ) VALUES (
+                    %(individual_id)s, %(name)s, %(birthday)s, %(email)s, %(phone)s, %(age_group)s, %(gender)s, TRUE
+                )
             '''
             result['result'] = 'added'
         else:
             sql = '''
                 UPDATE members
-                SET name = %(name)s, birthday = %(birthday)s, email = %(email)s, age_group = %(age_group)s,
-                    gender = %(gender)s, synced = TRUE
+                SET name = %(name)s, birthday = %(birthday)s, email = %(email)s, phone = %(phone)s,
+                    age_group = %(age_group)s, gender = %(gender)s, synced = TRUE
                 WHERE individual_id = %(individual_id)s
             '''
             changes = []
-            for field in ('name', 'birthday', 'email', 'age_group', 'gender'):
+            for field in ('name', 'birthday', 'email', 'phone', 'age_group', 'gender'):
                 existing_value = existing.get(field)
                 new_value = params.get(field)
                 if not existing_value == new_value:
@@ -115,7 +118,7 @@ class Database(fort.PostgresDatabase):
 
     def get_member_by_id(self, params) -> Dict:
         sql = '''
-            SELECT individual_id, name, birthday, email, age_group, gender, synced
+            SELECT individual_id, name, birthday, email, phone, age_group, gender, synced
             FROM members
             WHERE individual_id = %(individual_id)s
         '''
@@ -168,6 +171,13 @@ class Database(fort.PostgresDatabase):
                 )
             ''')
             self.add_schema_version(1)
+        if self.version < 2:
+            self.log.info('Migrating database to schema version 2')
+            self.u('''
+                ALTER TABLE members
+                ADD COLUMN phone text
+            ''')
+            self.add_schema_version(2)
 
     def _table_exists(self, table_name: str) -> bool:
         sql = 'SELECT count(*) table_count FROM information_schema.tables WHERE table_name = %(table_name)s'
