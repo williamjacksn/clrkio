@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   clrkio:
-    image: docker.pkg.github.com/williamjacksn/clrkio/clrkio
+    image: ghcr.io/williamjacksn/clrkio
     build: .
     environment:
       DB: postgres://postgres:postgres@postgres/postgres
