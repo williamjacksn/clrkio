@@ -125,12 +125,12 @@ def sync_one(member_data):
     if individual_id > 0:
         return db.sync_member({
             'individual_id': member_data.get('individualId'),
-            'name': member_data.get('preferredName'),
-            'birthday': datetime.date.fromisoformat(member_data.get('birthDay')),
+            'name': member_data.get('displayName'),
+            'birthday': datetime.date.fromisoformat(member_data.get('birthDate')),
             'email': member_data.get('email'),
             'phone': member_data.get('phone'),
             'age_group': member_data.get('ageGroup'),
-            'gender': member_data.get('gender')
+            'gender': member_data.get('sex')
         })
 
 
@@ -155,15 +155,11 @@ def sync():
     db.pre_sync_members()
     sync_results = []
     for h in _data.get('households'):
-        sync_result = sync_one(h.get('headOfHouse'))
-        if sync_result is not None:
-            sync_results.append(sync_result)
-        if 'spouse' in h:
-            sync_result = sync_one(h.get('spouse'))
-            if sync_result is not None:
-                sync_results.append(sync_result)
-        for ch in h.get('children', []):
-            sync_results.append(sync_one(ch))
+        if 'members' in h:
+            for m in h.get('members'):
+                sync_result = sync_one(m)
+                if sync_result is not None:
+                    sync_results.append(sync_result)
     sync_results.extend([{'result': 'removed', 'data': r} for r in db.post_sync_members()])
     end = datetime.datetime.utcnow()
     app.logger.info(f'Ending sync at {end}, duration {end - start}')

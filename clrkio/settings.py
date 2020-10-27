@@ -13,9 +13,8 @@ class Settings:
     bootstrap_admin: str
     church_username: str
     church_password: str
-    church_tools_api_key: str
-    church_tools_basic_auth_username: str
-    church_tools_basic_auth_password: str
+    church_tools_client_id: str
+    church_tools_client_secret: str
     db: str
     debug_layout: bool
     log_format: str
@@ -42,9 +41,8 @@ class Settings:
         self.bootstrap_admin = os.getenv('BOOTSTRAP_ADMIN')
         self.church_username = os.getenv('CHURCH_USERNAME')
         self.church_password = os.getenv('CHURCH_PASSWORD')
-        self.church_tools_api_key = os.getenv('CHURCH_TOOLS_API_KEY')
-        self.church_tools_basic_auth_username = os.getenv('CHURCH_TOOLS_BASIC_AUTH_USERNAME')
-        self.church_tools_basic_auth_password = os.getenv('CHURCH_TOOLS_BASIC_AUTH_PASSWORD')
+        self.church_tools_client_id = os.getenv('CHURCH_TOOLS_CLIENT_ID')
+        self.church_tools_client_secret = os.getenv('CHURCH_TOOLS_CLIENT_SECRET')
         self.debug_layout = as_bool(os.getenv('DEBUG_LAYOUT', 'False'))
         self.db = os.getenv('DB')
         self.log_format = os.getenv('LOG_FORMAT', '%(levelname)s [%(name)s] %(message)s')

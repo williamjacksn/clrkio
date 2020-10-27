@@ -9,51 +9,58 @@ class ChurchToolsClient:
     def __init__(self, settings: clrkio.settings.Settings):
         self.settings = settings
         self.session = requests.session()
-        self.session.auth = (settings.church_tools_basic_auth_username, settings.church_tools_basic_auth_password)
+
+        # get access token
+
+        token_url = 'https://ident.churchofjesuschrist.org/sso/oauth2/access_token'
+        _data = {
+            'client_id': self.settings.church_tools_client_id,
+            'client_secret': self.settings.church_tools_client_secret,
+            'grant_type': 'client_credentials',
+            'scope': 'openid profile'
+        }
+        _response = self.session.post(token_url, data=_data)
+        _response.raise_for_status()
+        token = _response.json().get('id_token')
         self.session.headers.update({
-            'lds_api_key': settings.church_tools_api_key,
-            'User-Agent': 'Member%20Tools/6544 CFNetwork/978.0.7 Darwin/18.7.0'
+            'Authorization': f'Bearer {token}'
         })
-        self.session.cookies['ObFormLoginCookie'] = ('wh=www.churchofjesuschrist.org%20wu=%2Fheader%20wo=1%20'
-                                                     'rh=https%3A%2F%2Fwww.churchofjesuschrist.org%20ru=%2Fheader')
-        log.debug(f'SESSION HEADERS {self.session.headers}')
 
         # sign in
 
-        _data = {
+        login_url = 'https://mobileauth.churchofjesuschrist.org/v1/mobile/login'
+        _json = {
             'username': settings.church_username,
             'password': settings.church_password
         }
-        _headers = {
-            'Value': ('wh=www.churchofjesuschrist.org%20wu=%2Fheader%20wo=1%20'
-                      'rh=https%3A%2F%2Fwww.churchofjesuschrist.org%20ru=%2Fheader')
-        }
-        login_url = 'https://signin.churchofjesuschrist.org/login.html'
-        _response = self.session.post(login_url, data=_data, headers=_headers, allow_redirects=False)
-        log.debug(f'REQUEST HEADERS {_response.request.headers}')
-        log.debug(f'RESPONSE HEADERS {_response.headers}')
-
-        # validate
-
-        self.session.headers.update({
-            'User-Agent': 'LDS Tools/3.6.4 (org.lds.ldstools; build:6544; iOS 12.4.4) Alamofire/4.8.1'
+        _response = self.session.post(login_url, json=_json)
+        _response.raise_for_status()
+        cookie_name = _response.json().get('name')
+        cookie_value = _response.json().get('value')
+        self.session.cookies.update({
+            cookie_name: cookie_value
         })
-        validate_url = ('https://ws-mobile.churchofjesuschrist.org/mobiledirectory/services/mobile/v3.0/validator/'
-                        'endOfLife/ldstools/3.0')
-        _response = self.session.get(validate_url)
-        log.debug(f'REQUEST HEADERS {_response.request.headers}')
-        log.debug(f'RESPONSE HEADERS {_response.headers}')
 
         # get home unit number
 
-        user_detail_url = ('https://ws-mobile.churchofjesuschrist.org/mobiledirectory/services/mobile/v3.0/ldstools/'
-                           'current-user-detail?lang=eng')
+        user_detail_url = 'https://wam-membertools-api.churchofjesuschrist.org/api/v4/user'
         _response = self.session.get(user_detail_url)
-        self.unit_number = _response.json().get('homeUnitNbr')
+        _response.raise_for_status()
+        self.unit_number = _response.json().get('homeUnits')[0]
 
     def get_unit_members(self):
-        url = (f'https://ws-mobile.churchofjesuschrist.org/mobiledirectory/services/mobile/v3.0/ldstools/'
-               f'member-detaillist-with-callings/{self.unit_number}?lang=eng')
-        _response = self.session.get(url)
+        url = 'https://wam-membertools-api.churchofjesuschrist.org/api/v4/sync?manual=true'
+        _json = [
+            {
+                'since': 1600000000,
+                'types': [
+                    'HOUSEHOLDS'
+                ],
+                'unitNumbers': [
+                    self.unit_number
+                ]
+            }
+        ]
+        _response = self.session.post(url, json=_json)
         _data = _response.json()
         return _data
