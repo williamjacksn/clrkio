@@ -83,7 +83,7 @@ def authorize():
     resp = requests.post(token_endpoint, data=data).json()
     id_token = resp.get('id_token')
     algorithms = discovery_document.get('id_token_signing_alg_values_supported')
-    claim = jwt.decode(id_token, verify=False, algorithms=algorithms)
+    claim = jwt.decode(id_token, options={'verify_signature': False}, algorithms=algorithms)
     flask.session['email'] = claim.get('email')
     target = flask.session.pop('sign-in-target-url', flask.url_for('index'))
     return flask.redirect(target)
