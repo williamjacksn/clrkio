@@ -1,6 +1,6 @@
 --extra-index-url https://alpine-wheels.github.io/index
 
-APScheduler==3.6.3
+APScheduler==3.7.0
 Flask==1.1.2
 PyJWT==2.0.1
 Werkzeug==1.0.1
