@@ -5,6 +5,7 @@ import clrkio.settings
 import collections
 import datetime
 import flask
+import flask.logging
 import functools
 import jwt
 import logging
@@ -19,8 +20,9 @@ import werkzeug.middleware.proxy_fix
 settings = clrkio.settings.Settings()
 scheduler = apscheduler.schedulers.background.BackgroundScheduler()
 
-app = flask.Flask(__name__)
+app = flask.Flask('clrkio')
 app.wsgi_app = werkzeug.middleware.proxy_fix.ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_port=1)
+log = logging.getLogger(__name__)
 
 app.secret_key = settings.secret_key
 app.config['PREFERRED_URL_SCHEME'] = settings.scheme
@@ -34,7 +36,7 @@ def permission_required(permission: str):
     def decorator(f):
         @functools.wraps(f)
         def decorated_function(*args, **kwargs):
-            app.logger.debug(f'Checking permission for {flask.g.email}')
+            log.debug(f'Checking permission for {flask.g.email}')
             if flask.g.email is None:
                 flask.session['sign-in-target-url'] = flask.request.url
                 return flask.redirect(flask.url_for('sign_in'))
@@ -50,7 +52,7 @@ def permission_required(permission: str):
 
 @app.before_request
 def before_request():
-    app.logger.debug(f'{flask.request.method} {flask.request.path}')
+    log.debug(f'{flask.request.method} {flask.request.path}')
     if settings.permanent_sessions:
         flask.session.permanent = True
     flask.g.settings = settings
@@ -68,7 +70,7 @@ def index():
 @app.route('/authorize')
 def authorize():
     for key, value in flask.request.values.items():
-        app.logger.debug(f'{key}: {value}')
+        log.debug(f'{key}: {value}')
     if flask.session.get('state') != flask.request.values.get('state'):
         return 'State mismatch', 401
     discovery_document = requests.get(settings.openid_discovery_document).json()
@@ -135,7 +137,7 @@ def sync_one(member_data):
 
 
 def send_email(to: str, body: str):
-    app.logger.debug(f'Sending email to {to}')
+    log.debug(f'Sending email to {to}')
     auth = ('api', settings.mailgun_api_key)
     data = {
         'from': settings.mailgun_sender,
@@ -148,7 +150,7 @@ def send_email(to: str, body: str):
 
 def sync():
     start = datetime.datetime.utcnow()
-    app.logger.info(f'Starting sync at {start}')
+    log.info(f'Starting sync at {start}')
     ct = clrkio.church.ChurchToolsClient(settings)
     _data = ct.get_unit_members()
     db = clrkio.db.Database(settings)
@@ -162,10 +164,10 @@ def sync():
                     sync_results.append(sync_result)
     sync_results.extend([{'result': 'removed', 'data': r} for r in db.post_sync_members()])
     end = datetime.datetime.utcnow()
-    app.logger.info(f'Ending sync at {end}, duration {end - start}')
-    app.logger.debug(sync_results)
+    log.info(f'Ending sync at {end}, duration {end - start}')
+    log.debug(sync_results)
     stats = collections.Counter([r.get('result') for r in sync_results])
-    app.logger.info(stats)
+    log.info(stats)
     if stats['added'] + stats['changed'] + stats['removed'] > 0:
         with app.app_context():
             sync_report = flask.render_template('email/sync-report.html', sync_time=start, sync_results=sync_results)
@@ -175,13 +177,13 @@ def sync():
 
 def main():
     logging.basicConfig(format=settings.log_format, level='DEBUG', stream=sys.stdout)
-    app.logger.debug(f'clrkio {settings.version}')
+    log.debug(f'clrkio {settings.version}')
     if not settings.log_level == 'DEBUG':
-        app.logger.debug(f'Changing log level to {settings.log_level}')
+        log.debug(f'Changing log level to {settings.log_level}')
     logging.getLogger().setLevel(settings.log_level)
 
     for logger, level in settings.other_log_levels.items():
-        app.logger.debug(f'Changing log level for {logger} to {level}')
+        log.debug(f'Changing log level for {logger} to {level}')
         logging.getLogger(logger).setLevel(level)
 
     db = clrkio.db.Database(settings)
