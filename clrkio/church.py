@@ -1,4 +1,5 @@
 import clrkio.settings
+import datetime
 import logging
 import requests
 
@@ -46,13 +47,14 @@ class ChurchToolsClient:
         user_detail_url = 'https://wam-membertools-api.churchofjesuschrist.org/api/v4/user'
         _response = self.session.get(user_detail_url)
         _response.raise_for_status()
+        log.debug(_response.json())
         self.unit_number = _response.json().get('homeUnits')[0]
 
     def get_unit_members(self):
         url = 'https://wam-membertools-api.churchofjesuschrist.org/api/v4/sync?manual=true'
         _json = [
             {
-                'since': 1600000000,
+                'since': int((datetime.datetime.now() - datetime.timedelta(days=85)).timestamp()),
                 'types': [
                     'HOUSEHOLDS'
                 ],
