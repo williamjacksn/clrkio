@@ -14,7 +14,7 @@ charset-normalizer==2.0.1
     # via requests
 click==8.0.1
     # via flask
-flask==2.0.3
+flask==2.1.0
     # via -r requirements.in
 fort==1.0.1
     # via -r requirements.in
